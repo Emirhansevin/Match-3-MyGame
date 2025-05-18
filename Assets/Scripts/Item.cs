@@ -1,16 +1,9 @@
 using UnityEngine;
 
-public class Item : MonoBehaviour
+[CreateAssetMenu(menuName = "Match-3/Item")]
+public sealed class Item : ScriptableObject
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    public int value;
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    public Sprite sprite;
 }

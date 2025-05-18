@@ -1,16 +1,6 @@
 using UnityEngine;
 
-public class Row : MonoBehaviour
+public sealed class Row : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    public Tile[] tiles;
 }
