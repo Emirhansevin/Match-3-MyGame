@@ -1,5 +1,6 @@
 using DG.Tweening;
 using Mono.Cecil;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,10 @@ using UnityEngine;
 public sealed class Board : MonoBehaviour
 {
     public static Board Instance { get; private set; }
+
+    [SerializeField] private AudioClip collectSound;
+
+    [SerializeField] private AudioSource audioSource;
 
     public Row[] rows;
 
@@ -38,10 +43,11 @@ public sealed class Board : MonoBehaviour
                 tile.x = x;
                 tile.y = y;
 
-                tile.Item = ItemDataBase.Items[Random.Range(0, ItemDataBase.Items.Length)];
+                tile.Item = ItemDataBase.Items[UnityEngine.Random.Range(0, ItemDataBase.Items.Length)];
                 Tiles[x, y] = tile;
             }
         }
+        Pop();
     }
 
     private void Update()
@@ -56,7 +62,26 @@ public sealed class Board : MonoBehaviour
     }
     public  async void Select(Tile tile)
     {
-        if (!_selection.Contains(tile)) _selection.Add(tile);
+        if (!_selection.Contains(tile))
+        {
+
+            if (_selection.Count > 0)
+            {
+                if (Array.IndexOf(_selection[0].Neighbours,tile) != -1)
+                {
+                    _selection.Add(tile);
+                }
+            }
+            else
+            {
+                _selection.Add(tile);
+            }
+
+            
+        }
+            
+
+       
        
         if (_selection.Count < 2) return;
 
@@ -64,7 +89,16 @@ public sealed class Board : MonoBehaviour
 
         await Swap(_selection[0], _selection[1]);
 
-        _selection.Clear();
+        if (CanPop())
+        {
+            Pop();
+        }
+        else
+        {
+            await Swap(_selection[0], _selection[1]);
+        }
+
+            _selection.Clear();
 
     }
     public async Task Swap(Tile tile1, Tile tile2)
@@ -99,10 +133,62 @@ public sealed class Board : MonoBehaviour
 
     private bool CanPop()
     {
+        for (int x = 0; x < Height; x++)
+            for (var y = 0; y < Width; y++)
+                if (Tiles[x, y].GetConnectedTiles().Skip(1).Count() >= 2)
+                    return true;
+
+
+        return false;
+
+
 
     }
-    private void Pop()
+    private async void Pop()
     {
+        for (int y = 0; y < Height; y++)
+        {
+            for (var x = 0; x < Width; x++)
+            {
+                var tile = Tiles[x, y];
 
+
+                var connectedTiles = tile.GetConnectedTiles();
+
+                if (connectedTiles.Skip(1).Count() < 2) continue;
+
+                var deflateSequence = DOTween.Sequence();
+
+                foreach (var connectedTile in connectedTiles) deflateSequence.Join(connectedTile.icon.transform.DOScale(Vector3.zero, TweenDuration));
+
+
+                audioSource.PlayOneShot(collectSound);
+
+                ScoreCounter.Instance.Score += tile.Item.value * connectedTiles.Count;
+
+                await deflateSequence.Play().AsyncWaitForCompletion();
+
+               
+
+                    var inflateSequence = DOTween.Sequence();
+
+                foreach (var connectedTile in connectedTiles)
+                {
+                    connectedTile.Item = ItemDataBase.Items[UnityEngine.Random.Range(0, ItemDataBase.Items.Length)];
+
+                    inflateSequence.Join(connectedTile.icon.transform.DOScale(Vector3.one, TweenDuration));
+
+                }
+                await inflateSequence.Play().AsyncWaitForCompletion();
+
+
+                x = 0;
+                y = 0;
+
+            }
+        }
     }
+    
+        
+    
 }
